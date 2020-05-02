@@ -1,18 +1,15 @@
 const promotions = ["SINGLE LOOK", "DOUBLE LOOK", "TRIPLE LOOK", "FULL LOOK"];
+const sumPrice = (x, y) => x + y;
 
 function filterProducts(ids, productsList) {
-  return productsList.filter((product) => {
-    return ids.includes(product.id);
-  });
+  return productsList.filter((product) => ids.includes(product.id));
 }
 
 function getProductDetails(value) {
-  return value.map((product) => {
-    return {
-      name: product.name,
-      category: product.category,
-    };
-  });
+  return value.map((product) => ({
+    name: product.name,
+    category: product.category,
+  }));
 }
 
 function getPromotion(products) {
@@ -27,41 +24,39 @@ function getPromotion(products) {
   return promotion[promotion.length - 1];
 }
 
-function getPrices(products, promotion) {
-  const sum = (x, y) => x + y;
-
-  let totalRegular =  products
-    .map((product) => {
-      return product.regularPrice;
-    })
-    .reduce(sum, 0)
+function getRegularPrice(products) {
+  return products
+    .map((product) => product.regularPrice)
+    .reduce(sumPrice, 0)
     .toFixed(2);
+}
 
-  let totalPrice = products
+function getTotalPrice(products, promotion) {
+  return products
     .map((product) => {
-      let promotionPrice = product.promotions.filter((promo) => {
-        return promo.looks.includes(promotion);
-      });
+      let promotionPrice = product.promotions.filter((promo) =>
+        promo.looks.includes(promotion)
+      );
 
-      if (promotionPrice[0]) {
-        promotionPrice = promotionPrice[0].price;
-      } else {
-        promotionPrice = product.regularPrice;
-      }
+      promotionPrice = promotionPrice[0]
+        ? promotionPrice[0].price
+        : product.regularPrice;
+
       return promotionPrice;
     })
-    .reduce(sum, 0)
+    .reduce(sumPrice, 0)
     .toFixed(2);
-    
-  let discountValue = (totalRegular - totalPrice).toFixed(2);
+}
+
+function getDiscount(regularPrice, totalPrice) {
+  let discountValue = (regularPrice - totalPrice).toFixed(2);
   let discount = Intl.NumberFormat("pt-BR", {
     style: "percent",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(1 - totalPrice / totalRegular);
+  }).format(1 - totalPrice / regularPrice);
 
   return {
-    totalPrice,
     discountValue,
     discount,
   };
@@ -71,10 +66,9 @@ function getShoppingCart(ids, productsList) {
   const filteredProducts = filterProducts(ids, productsList);
   const products = getProductDetails(filteredProducts);
   const promotion = getPromotion(filteredProducts);
-  const { totalPrice, discountValue, discount } = getPrices(
-    filteredProducts,
-    promotion
-  );
+  let regularPrice = getRegularPrice(filteredProducts);
+  let totalPrice = getTotalPrice(filteredProducts, promotion);
+  let { discountValue, discount } = getDiscount(regularPrice, totalPrice);
 
   return {
     products,
